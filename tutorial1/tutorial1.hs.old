@@ -1,0 +1,260 @@
+-- Informatics 1 - Functional Programming
+-- Tutorial 1
+--
+-- Due: the tutorial of week 3 (4/5 Oct.)
+
+import Data.Char
+import Data.List
+import Test.QuickCheck
+
+
+
+-- 1. halveEvens
+
+-- List-comprehension version
+halveEvens :: [Int] -> [Int]
+halveEvens xs = [x `div` 2 | x <- xs, x `mod` 2 == 0]
+
+-- Recursive version
+halveEvensRec :: [Int] -> [Int]
+halveEvensRec [] = []
+halveEvensRec (x:xs)
+  | x `mod` 2 == 0  = x `div` 2 : next
+  | otherwise       = next
+  where
+    next = halveEvensRec xs
+
+-- Mutual test
+prop_halveEvens :: [Int] -> Bool
+prop_halveEvens xs = halveEvens xs == halveEvensRec xs
+
+
+-- 2. inRange
+
+-- List-comprehension version
+inRange :: Int -> Int -> [Int] -> [Int]
+inRange lo hi xs = [x | x <- xs, x >= lo, x <= hi]
+
+-- Recursive version
+inRangeRec :: Int -> Int -> [Int] -> [Int]
+inRangeRec lo hi [] = []
+inRangeRec lo hi (x:xs)
+  | lo <= x && x <= hi  = x : next
+  | otherwise           = next
+  where
+    next = inRangeRec lo hi xs
+
+-- Mutual test
+prop_inRange :: Int -> Int -> [Int] -> Bool
+prop_inRange lo hi xs = inRange lo hi xs == inRangeRec lo hi xs
+
+
+
+-- 3. sumPositives: sum up all the positive numbers in a list
+
+-- List-comprehension version
+countPositives :: [Int] -> Int
+countPositives xs = sum [x | x <- xs, x > 0]
+
+-- Recursive version
+countPositivesRec :: [Int] -> Int
+countPositivesRec [] = 0
+countPositivesRec (x:xs)
+  | x > 0      = x + next
+  | otherwise  = next
+  where
+    next = countPositivesRec xs
+
+-- Mutual test
+prop_countPositives :: [Int] -> Bool
+prop_countPositives xs = countPositives xs == countPositivesRec xs
+
+
+
+-- 4. pennypincher
+
+-- Helper function
+discount :: Int -> Int
+discount x = round $ 0.9 * fromIntegral x
+
+-- List-comprehension version
+pennypincher :: [Int] -> Int
+pennypincher ps = sum [cost | p <- ps, let cost = discount p, cost <= 19900]
+
+-- Recursive version
+pennypincherRec :: [Int] -> Int
+pennypincherRec [] = 0
+pennypincherRec (x:xs)
+  | p <= 19900  = p + next
+  | otherwise   = next
+  where
+    p = discount x
+    next = pennypincherRec xs
+
+-- Mutual test
+prop_pennypincher :: [Int] -> Bool
+prop_pennypincher xs = pennypincher xs == pennypincherRec xs
+
+
+-- 5. sumDigits
+
+-- List-comprehension version
+multDigits :: String -> Int
+multDigits s = product [digitToInt c | c <- s, isDigit c]
+
+-- Recursive version
+multDigitsRec :: String -> Int
+multDigitsRec [] = 1
+multDigitsRec (c:str)
+  | isDigit c  = digitToInt c * next
+  | otherwise  = next
+  where
+    next = multDigitsRec str
+
+-- Mutual test
+prop_multDigits :: String -> Bool
+prop_multDigits s = multDigits s == multDigitsRec s
+
+
+
+-- 6. capitalise
+
+-- List-comprehension version
+capitalise :: String -> String
+capitalise [] = []
+capitalise (c:str) = toUpper c : [toLower c | c <- str]
+
+-- Recursive version
+capitaliseRec' :: String -> String
+capitaliseRec' [] = []
+capitaliseRec' [c] = [toUpper c]
+capitaliseRec' str = next ++ [toLower $ last str]
+  where
+    next = capitaliseRec' $ init str
+
+capitaliseRec :: String -> String
+capitaliseRec [] = []
+capitaliseRec (c:str) = toUpper c : lowerRec str
+  where
+    lowerRec :: String -> String
+    lowerRec [] = []
+    lowerRec (c:str) = toLower c : lowerRec str
+
+
+-- Mutual test
+prop_capitalise :: String -> Bool
+prop_capitalise s = capitalise s == capitaliseRec s
+
+
+
+-- 7. title
+
+titleWord :: String -> String
+titleWord str
+  | length str >= 4  = capitalise str
+  | otherwise        = lowercase str
+  where
+    lowercase :: String -> String
+    lowercase str = [toLower c | c <- str]
+
+-- List-comprehension version
+title :: [String] -> [String]
+title [] = []
+title (first:words) = capitalise first : [titleWord w | w <- words]
+
+-- Recursive version
+titleRec' :: [String] -> [String]
+titleRec' [] = []
+titleRec' [str] = [capitalise str]
+titleRec' words = next ++ [titleWord $ last words]
+  where
+    next = titleRec' $ init words
+
+titleRec :: [String] -> [String]
+titleRec [] = []
+titleRec (first:words) = capitalise first : titleRec' words
+  where
+    titleRec' :: [String] -> [String]
+    titleRec' [] = []
+    titleRec' (w:words) = titleWord w : titleRec' words
+
+-- mutual test
+prop_title :: [String] -> Bool
+prop_title s = title s == titleRec s
+
+
+
+
+-- Optional Material
+
+-- 8. crosswordFind
+
+-- List-comprehension version
+crosswordFind :: Char -> Int -> Int -> [String] -> [String]
+crosswordFind c pos len words
+  = [w | w <- words,
+     length w == len,
+     0 <= pos,
+     pos < len,
+     w!!pos == c]
+
+-- Recursive version
+crosswordFindRec :: Char -> Int -> Int -> [String] -> [String]
+crosswordFindRec _ _ _ [] = []
+crosswordFindRec c pos len (w:words)
+  | length w == len
+    && 0 <= pos
+    && pos < len
+    && w!!pos == c  = w : next
+  | otherwise       = next
+  where next = crosswordFindRec c pos len words
+
+-- Mutual test
+prop_crosswordFind :: Char -> Int -> Int -> [String] -> Bool
+prop_crosswordFind c pos len words = crosswordFind c pos len words == crosswordFindRec c pos len words
+
+
+
+-- 9. search
+
+-- List-comprehension version
+
+search :: String -> Char -> [Int]
+search str q = [i | (i, c) <- zip [0..] str, c == q]
+
+-- Recursive version
+searchRec :: String -> Char -> [Int]
+searchRec str q = searchRec' str q 0
+
+searchRec' :: String -> Char -> Int -> [Int]
+searchRec' [] q i = []
+searchRec' (c:str) q i
+  | c == q     = i : next
+  | otherwise  = next
+  where
+    next = searchRec' str q (i + 1)
+
+-- Mutual test
+prop_search :: String -> Char -> Bool
+prop_search str q = search str q == searchRec str q
+
+
+-- 10. contains
+
+-- List-comprehension version
+contains :: String -> String -> Bool
+contains str sub = not $ null suffixHasPrefix
+  where
+    suffixHasPrefix = [True | s <- suffixes, sub `isPrefixOf` s]
+    suffixes = [drop i str | i <- [0..length str]]
+
+-- Recursive version
+containsRec :: String -> String -> Bool
+containsRec _ [] = True
+containsRec [] _ = False
+containsRec str sub = sub `isPrefixOf` str
+                      || containsRec (tail str) sub
+
+-- Mutual test
+prop_contains :: String -> String -> Bool
+prop_contains str sub = contains str sub == containsRec str sub
