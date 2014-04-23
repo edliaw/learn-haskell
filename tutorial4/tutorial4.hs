@@ -1,4 +1,4 @@
--- Informatics 1 - Functional Programming 
+-- Informatics 1 - Functional Programming
 -- Tutorial 4
 --
 -- Due: the tutorial of week 6 (24/25 Oct)
@@ -68,13 +68,12 @@ emailsByNameFromURL url name =
 
 -- 1.
 sameString :: String -> String -> Bool
-sameString a b = (map toLower a) == (map toLower b)
+sameString a b = map toUpper a == map toUpper b
 
 
 -- 2.
 prefix :: String -> String -> Bool
-prefix [] str = True
-prefix substr str = all (== True) (zipWith sameString substr str)
+prefix substr str = substr `sameString` take (length substr) str
 
 prop_prefix :: String -> Int -> Bool
 prop_prefix str n  =  prefix substr (map toLower str) &&
@@ -85,26 +84,47 @@ prop_prefix str n  =  prefix substr (map toLower str) &&
 
 -- 3.
 contains :: String -> String -> Bool
-contains = undefined
+contains _ [] = True
+contains [] _ = False
+contains (c:cs) substr = prefix substr (c:cs) || contains cs substr
 
 prop_contains :: String -> Int -> Int -> Bool
-prop_contains = undefined
+prop_contains str n m = (map toLower str) `contains` substr &&
+                        (map toUpper str) `contains` substr
+  where substr = take n (drop m str)
 
 
 -- 4.
 takeUntil :: String -> String -> String
-takeUntil = undefined
+takeUntil _ [] = ""
+takeUntil substr (c:cs)
+  | prefix substr (c:cs) = ""
+  | otherwise = c : takeUntil substr cs
 
 dropUntil :: String -> String -> String
-dropUntil = undefined
+dropUntil _ [] = ""
+dropUntil substr str
+  | prefix substr str = drop (length substr) str
+  | otherwise = dropUntil substr $ tail str
 
 
 -- 5.
 split :: String -> String -> [String]
-split = undefined
+split "" str = [str]
+split sep str
+  | str `contains` sep = takeUntil sep str : split sep (dropUntil sep str)
+  | otherwise = [str]
 
 reconstruct :: String -> [String] -> String
-reconstruct = undefined
+reconstruct _ [] = ""
+reconstruct sep ss = foldr1 f ss
+  where
+    f xs ys = xs ++ sep ++ ys
+
+reconstruct' :: String -> [String] -> String
+reconstruct' _ [] = ""
+reconstruct' _ [s] = s
+reconstruct' sep (s:ss) = s ++ sep ++ reconstruct' sep ss
 
 prop_split :: Char -> String -> String -> Bool
 prop_split c sep str = reconstruct sep' (split sep' str) `sameString` str
@@ -112,25 +132,29 @@ prop_split c sep str = reconstruct sep' (split sep' str) `sameString` str
 
 -- 6.
 linksFromHTML :: HTML -> [Link]
-linksFromHTML = undefined
+linksFromHTML html = tail $ split "<a href=\"" html
 
 testLinksFromHTML :: Bool
-testLinksFromHTML  =  linksFromHTML testHTML == testLinks
+testLinksFromHTML = linksFromHTML testHTML == testLinks
 
 
 -- 7.
 takeEmails :: [Link] -> [Link]
-takeEmails = undefined
+takeEmails = filter (`contains` "mailto:")
 
 
 -- 8.
 link2pair :: Link -> (Name, Email)
-link2pair = undefined
+link2pair link
+  | link `contains` "mailto" = (name, email)
+  | otherwise = error "Link must contain a mailto: address"
+  where name = dropUntil "\">" $ takeUntil "</a>" link
+        email = dropUntil "mailto:" $ takeUntil "\">" link
 
 
 -- 9.
 emailsFromHTML :: HTML -> [(Name,Email)]
-emailsFromHTML = undefined
+emailsFromHTML = nub . map link2pair . takeEmails . linksFromHTML
 
 testEmailsFromHTML :: Bool
 testEmailsFromHTML  =  emailsFromHTML testHTML == testAddrBook
@@ -138,12 +162,12 @@ testEmailsFromHTML  =  emailsFromHTML testHTML == testAddrBook
 
 -- 10.
 findEmail :: Name -> [(Name, Email)] -> [(Name, Email)]
-findEmail = undefined
+findEmail substr emails = [(n, e) | (n, e) <- emails, n `contains` substr]
 
 
 -- 11.
 emailsByNameFromHTML :: HTML -> Name -> [(Name,Email)]
-emailsByNameFromHTML = undefined
+emailsByNameFromHTML html name = findEmail name $ emailsFromHTML html
 
 
 -- Optional Material
