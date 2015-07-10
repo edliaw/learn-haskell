@@ -1,4 +1,4 @@
-haskell-test
-============
+learn-haskell
+=============
 
 Exploring Haskell
